@@ -1,7 +1,9 @@
 param(
     [Float]
-    $WaitFor = 3.0
+    $WaitFor = 5.0
 )
+
+$processname = 'vgtray'
 
 function Exit-Message {
     param (
@@ -20,17 +22,27 @@ function Exit-Message {
     exit $exit_code
 }
 
-Write-Output "Searching for vgtray..."
-Start-Sleep -Seconds $WaitFor
+Write-Output "Searching for $processname..."
 
-try {
-    $process = (Get-Process -Name "vgtray" -ErrorAction Stop)
+# Scan every 100ms until either the process is found, or until $retries exceeds $WaitFor.
+$retries = 0
+while ($true) {
+    try {
+        $process = (Get-Process -Name $processname -ErrorAction Stop)
+        break
     }
-catch {
-    Exit-Message "Process not found. Exiting..."
+    catch {
+        if ($retries -ge $WaitFor) {
+            Exit-Message "$processname not found. exiting."
+        }
+        Start-Sleep -Milliseconds 100
+        $retries += 0.1
+        continue
+    }
 }
 
-$WindowTitle = "Kill vgtray process?"
+# Window information regarding vgtray
+$WindowTitle = -join @("Kill ", $process.Name, " process?")
 $WindowDescription = -join @(
                     "The process vgtray is RiotGame's anti-cheat system that must be ",
                     "started when the system starts. ",
